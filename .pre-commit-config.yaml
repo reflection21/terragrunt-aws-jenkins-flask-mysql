@@ -1,0 +1,65 @@
+repos:
+  - repo: https://github.com/antonbabenko/pre-commit-terraform
+    rev: v1.98.0
+    hooks:
+      - id: terraform_fmt
+      - id: terraform_validate
+      - id: terraform_docs
+        args:
+          - --hook-config=--path-to-file=README.md        # Valid UNIX path. I.e. ../TFDOC.md or docs/README.md etc.
+          - --hook-config=--add-to-existing-file=true     # Boolean. true or false
+          - --hook-config=--create-file-if-not-exist=true # Boolean. true or false
+          - --hook-config=--use-standard-markers=true     # Boolean. Defaults to true (v1.93+), false (<v1.93). Set to true for compatibility with terraform-docs
+
+      - id: terraform_checkov    # scan modules
+        args:
+          # - '--args=--skip-check=CKV2_AWS_5' # skip error
+          #- '--args=--skip-check=CKV2_AWS_44' #
+          #- '--args=--skip-check=CKV2_AWS_35' #
+          - '--args=--skip-check=CKV2_AWS_19' # bag
+          - '--args=--skip-check=CKV_AWS_135'
+          - '--args=--skip-check=CKV2_AWS_5'
+          - '--args=--skip-check=CKV_AWS_88'
+          - '--args=--skip-check=CKV2_AWS_57'
+
+      # - id: terraform_trivy #sucurity hook
+      #   files: modules/
+      #   args:
+      #     - >
+      #       --args=--exclude-downloaded-modules=true
+      #       -e arws-rds-enable-performance-insight
+
+      # - id: terrascan
+      #   args:
+      #     - '--args=--verbose'
+      #     - '--args=--skip-rules="AC_AWS_0057,AC_AWS_0053,AC_AWS_0454,AC_AWS_0369"'
+
+      - id: terraform_tflint
+        args:
+          - '--args=--only=terraform_deprecated_interpolation'
+          - '--args=--only=terraform_deprecated_index'
+          - '--args=--only=terraform_unused_declarations'
+          - '--args=--only=terraform_comment_syntax'
+          - '--args=--only=terraform_documented_outputs'
+          - '--args=--only=terraform_documented_variables'
+          - '--args=--only=terraform_typed_variables'
+          - '--args=--only=terraform_module_pinned_source'
+          - '--args=--only=terraform_naming_convention'
+          - '--args=--only=terraform_required_version'
+          - '--args=--only=terraform_required_providers'
+          - '--args=--only=terraform_standard_module_structure'
+          - '--args=--only=terraform_workspace_remote'
+
+  - repo: https://github.com/antonbabenko/pre-commit-terraform
+    rev: v1.99.0
+    hooks:
+      - id: terragrunt_fmt
+
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.4.0
+    hooks:
+      - id: check-merge-conflict
+      - id: end-of-file-fixer
+      - id: trailing-whitespace
+      - id: detect-aws-credentials
+      - id: detect-private-key
