@@ -1,0 +1,16 @@
+#SPDX-License-Identifier: MIT-0
+---
+# handlers file for jenkins-worker
+
+- name: update_cache_docker
+  apt:
+    update_cache: yes
+  become: true
+  tags: install_docker
+
+- name: restart_docker
+  service:
+    name: docker
+    state: reload
+  become: true
+  tags: install_docker

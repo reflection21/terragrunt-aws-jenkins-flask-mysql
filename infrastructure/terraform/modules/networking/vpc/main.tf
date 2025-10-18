@@ -12,25 +12,25 @@ resource "aws_vpc" "vpc" {
     "Name" = "${var.deployment_prefix}-vpc"
   }
 }
-# jenkins subnets
-resource "aws_subnet" "jenkins" {
+# public subnets
+resource "aws_subnet" "public" {
   vpc_id                  = aws_vpc.vpc.id
-  count                   = length(var.jenkins_subnets_cidr)
-  cidr_block              = var.jenkins_subnets_cidr[count.index]
+  count                   = length(var.public_subnets_cidr)
+  cidr_block              = var.public_subnets_cidr[count.index]
   availability_zone       = data.aws_availability_zones.available.names[count.index]
   map_public_ip_on_launch = true
   tags = {
-    "Name" = "${var.deployment_prefix}-jenkins-subnet-${count.index + 1}"
+    "Name" = "${var.deployment_prefix}-public-subnets-${count.index + 1}"
   }
 }
-# jenkins workers
-resource "aws_subnet" "jenkins_workers" {
+# public subnets
+resource "aws_subnet" "jenkins" {
   vpc_id            = aws_vpc.vpc.id
-  count             = length(var.workers_subnets_cidr)
-  cidr_block        = var.workers_subnets_cidr[count.index]
+  count             = length(var.jenkins_subnets_cidr)
+  cidr_block        = var.jenkins_subnets_cidr[count.index]
   availability_zone = data.aws_availability_zones.available.names[count.index]
   tags = {
-    "Name" = "${var.deployment_prefix}-workers-subnet-${count.index + 1}"
+    "Name" = "${var.deployment_prefix}-jenkins-subnet-${count.index + 1}"
   }
 }
 # app subnets
@@ -43,14 +43,14 @@ resource "aws_subnet" "app" {
     "Name" = "${var.deployment_prefix}-app-subnet-${count.index + 1}"
   }
 }
-# db subnets
-resource "aws_subnet" "db" {
+# rds mysql subnets
+resource "aws_subnet" "rds_mysql" {
   vpc_id            = aws_vpc.vpc.id
-  count             = length(var.db_subnets_cidr)
-  cidr_block        = var.db_subnets_cidr[count.index]
+  count             = length(var.rds_mysql_subnets_cidr)
+  cidr_block        = var.rds_mysql_subnets_cidr[count.index]
   availability_zone = data.aws_availability_zones.available.names[count.index]
   tags = {
-    "Name" = "${var.deployment_prefix}-db-subnet-${count.index + 1}"
+    "Name" = "${var.deployment_prefix}-rds-mysql-subnet-${count.index + 1}"
   }
 }
 # igw
@@ -66,10 +66,10 @@ resource "aws_eip" "nat_eip" {
     "Name" = "${var.deployment_prefix}-nat-eip"
   }
 }
-# nat into jenkins subnet for private subnets
+# nat
 resource "aws_nat_gateway" "nat" {
   allocation_id = aws_eip.nat_eip.id
-  subnet_id     = aws_subnet.jenkins[0].id
+  subnet_id     = aws_subnet.public[0].id
   tags = {
     "Name" = "${var.deployment_prefix}-nat"
   }
@@ -96,17 +96,20 @@ resource "aws_route_table" "nat_rt" {
     "Name" = "${var.deployment_prefix}-nat-rt"
   }
 }
-# link igw rt to jenkins subnets
-resource "aws_route_table_association" "jenkins" {
-  subnet_id      = aws_subnet.jenkins[0].id
+# link public subnets to igw
+resource "aws_route_table_association" "public_subnets_rt" {
+  count          = length(var.public_subnets_cidr)
+  subnet_id      = aws_subnet.public[count.index].id
   route_table_id = aws_route_table.igw_rt.id
 }
-# link nat to jenkins workers subnet
-resource "aws_route_table_association" "jenkins_workers" {
-  subnet_id      = aws_subnet.jenkins_workers[0].id
+# link jenkins subnets to nat
+resource "aws_route_table_association" "jenkins_subnets_rt" {
+  count          = length(var.jenkins_subnets_cidr)
+  subnet_id      = aws_subnet.jenkins[count.index].id
   route_table_id = aws_route_table.nat_rt.id
 }
-# link nat to apps subnet
+
+# link app subnets to nat
 resource "aws_route_table_association" "app" {
   count          = length(var.app_subnets_cidr)
   subnet_id      = aws_subnet.app[count.index].id

@@ -1,0 +1,76 @@
+#SPDX-License-Identifier: MIT-0
+---
+# tasks file for jenkins-master
+- name: install nginx
+  apt:
+    update_cache: true
+    name: nginx
+    state: present
+  become: true
+  tags: nginx
+
+- name: copy nginx config
+  copy:
+    src: nginx.conf
+    dest: /etc/nginx/sites-available/default
+  become: true
+  notify: reload nginx
+  tags: nginx
+
+# add official GPG-key Docker
+- name: Add Docker GPG key
+  apt_key:
+    url: https://download.docker.com/linux/ubuntu/gpg
+    state: present
+  become: true
+  tags: install_docker
+
+# add official Docker repo
+- name: Add Docker apt repository
+  apt_repository:
+    repo: "deb [arch=amd64] https://download.docker.com/linux/ubuntu {{ ansible_distribution_release }} stable"
+    state: present
+  become: true
+  notify: update_cache_docker
+  tags: install_docker
+
+# install Docker и docker compose v2 plugin
+- name: Install Docker and docker-compose plugin
+  apt:
+    name:
+      - docker-ce
+      - docker-ce-cli
+      - containerd.io
+      - docker-compose-plugin
+    state: present
+  notify: restart_docker
+  become: true
+  tags: install_docker
+
+# add user ubuntu in group docker
+- name: Add ubuntu user to docker group
+  user:
+    name: ubuntu
+    groups: docker
+    append: true
+  become: true
+  tags: docker_group
+
+# copy docker-compose.yml
+- name: Copy docker-compose.yml
+  copy:
+    src: docker-compose.yml
+    dest: /home/ubuntu/docker-compose.yml
+    owner: ubuntu
+    group: ubuntu
+    mode: "0644"
+  become: true
+  tags: copy
+
+# start docker compose
+- name: Start docker-compose
+  community.docker.docker_compose_v2:
+    project_src: /home/ubuntu/
+    state: present
+  become: true
+  tags: start_compose

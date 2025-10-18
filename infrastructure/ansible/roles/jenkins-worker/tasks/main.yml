@@ -1,0 +1,63 @@
+#SPDX-License-Identifier: MIT-0
+---
+# tasks file for jenkins-worker
+- name: install java
+  apt:
+    update_cache: true
+    name:
+      - "{{ jdk_version }}"
+      - ca-certificates
+      - curl
+    state: present
+  become: true
+  tags: java
+
+- name: create dir for key
+  file:
+    path: /etc/apt/keyrings
+    state: directory
+    mode: "0755"
+  become: true
+  tags: install_docker
+
+- name: download GPG-key Docker
+  get_url:
+    url: https://download.docker.com/linux/ubuntu/gpg
+    dest: /etc/apt/keyrings/docker.asc
+    mode: "0644"
+  become: true
+  tags: install_docker
+
+- name: add source of docker
+  copy:
+    content: |
+      deb [arch={{ ansible_architecture | replace('x86_64', 'amd64') }} signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu {{ ansible_lsb.codename }} stable
+    dest: /etc/apt/sources.list.d/docker.list
+    mode: "0644"
+  become: true
+  notify: update_cache_docker
+  tags: install_docker
+
+- name: install docker
+  apt:
+    name:
+      - docker-ce
+      - docker-ce-cli
+      - containerd.io
+      - docker-buildx-plugin
+      - docker-compose-plugin
+  become: true
+  notify: restart_docker
+  tags: install_docker
+
+- name: create user 'jenkins'
+  user:
+    name: jenkins
+    groups:
+      - docker
+    shell: /bin/bash
+    create_home: yes
+    state: present
+    append: yes # add to secondary group
+  become: true
+  tags: create_user

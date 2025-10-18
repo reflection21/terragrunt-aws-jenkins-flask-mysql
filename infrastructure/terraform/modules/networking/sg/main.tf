@@ -18,31 +18,106 @@ resource "aws_security_group" "jenkins_workers" {
   }
 }
 
-# sg ingress rule for jenkins server from admin (tcp)
-resource "aws_security_group_rule" "ingress_admin" {
-  description       = "allow connect admin to jenkins"
+# app sg
+resource "aws_security_group" "app" {
+  name        = "app-sg"
+  description = "sg for app"
+  vpc_id      = var.vpc_id
+  tags = {
+    "Name" = "${var.deployment_prefix}-app-sg"
+  }
+}
+
+# load balancer sg
+resource "aws_security_group" "load_balancer" {
+  name        = "load-balancer-sg"
+  description = "sg for load balancer"
+  vpc_id      = var.vpc_id
+  tags = {
+    "Name" = "${var.deployment_prefix}-load-balancer-sg"
+  }
+}
+
+# rds sg
+resource "aws_security_group" "rds_msql" {
+  name        = "rds-mysql-sg"
+  description = "sg for rds mysql"
+  vpc_id      = var.vpc_id
+  tags = {
+    "Name" = "${var.deployment_prefix}-rds-mysql-sg"
+  }
+}
+
+# allow all trafic to loadbalancer from internet on 80 port
+resource "aws_security_group_rule" "ingress_traffic_to_lb_80" {
+  description       = "allow traffic to lb"
   type              = "ingress"
-  from_port         = 8080
-  to_port           = 8080
+  from_port         = 80
+  to_port           = 80
   protocol          = "tcp"
-  cidr_blocks       = ["91.123.151.244/32"]
-  security_group_id = aws_security_group.jenkins.id
+  cidr_blocks       = ["0.0.0.0/0"]
+  security_group_id = aws_security_group.load_balancer.id
 }
 
-# sg ingress rule for jenkins server from admin (icmp)
-resource "aws_security_group_rule" "ingress_admin_icmp" {
-  description       = "allow ping jenkins"
-  type              = "ingress"
-  from_port         = -1
-  to_port           = -1
-  protocol          = "icmp"
-  cidr_blocks       = var.jenkins_subnet_cidr
-  security_group_id = aws_security_group.jenkins.id
+# allow traffic to app from lb
+resource "aws_security_group_rule" "egress_traffic_to_lb_5000" {
+  description              = "allow traffic to app from lb"
+  type                     = "egress"
+  from_port                = 5000
+  to_port                  = 5000
+  protocol                 = "tcp"
+  source_security_group_id = aws_security_group.app.id
+  security_group_id        = aws_security_group.load_balancer.id
 }
 
-# sg ingress rule for jenkins server from jenkins workers
-resource "aws_security_group_rule" "ingress_workers" {
-  description              = "allow connect workers to jenkins"
+# allow traffic to app from lb
+resource "aws_security_group_rule" "ingress_traffic_to_app_5000" {
+  description              = "allow traffic to app from lb"
+  type                     = "ingress"
+  from_port                = 5000
+  to_port                  = 5000
+  protocol                 = "tcp"
+  source_security_group_id = aws_security_group.load_balancer.id
+  security_group_id        = aws_security_group.app.id
+}
+
+
+# allow traffic to app from lb
+resource "aws_security_group_rule" "egress_traffic_to_lb_80" {
+  description              = "allow traffic to jenkins from lb"
+  type                     = "egress"
+  from_port                = 80
+  to_port                  = 80
+  protocol                 = "tcp"
+  source_security_group_id = aws_security_group.jenkins.id
+  security_group_id        = aws_security_group.load_balancer.id
+}
+
+# allow traffic to jenkins on port 8080 
+resource "aws_security_group_rule" "ingress_jenkins_80_lb" {
+  description              = "allow traffic to jenkins"
+  type                     = "ingress"
+  from_port                = 80
+  to_port                  = 80
+  protocol                 = "tcp"
+  source_security_group_id = aws_security_group.load_balancer.id
+  security_group_id        = aws_security_group.jenkins.id
+}
+
+# allow traffic to app on port 5000 
+resource "aws_security_group_rule" "ingress_app_5000_lb" {
+  description       = "allow egress trafic of app into internet"
+  type              = "egress"
+  from_port         = 0
+  to_port           = 0
+  protocol          = -1
+  cidr_blocks       = ["0.0.0.0/0"]
+  security_group_id = aws_security_group.app.id
+}
+
+# allow traffic to jenkins from jenkins workers on port 8080 
+resource "aws_security_group_rule" "ingress_jenkins_8080_workers" {
+  description              = "allow traffic to jenkins from jenkins worker (jnlp)"
   type                     = "ingress"
   from_port                = 8080
   to_port                  = 8080
@@ -51,9 +126,9 @@ resource "aws_security_group_rule" "ingress_workers" {
   security_group_id        = aws_security_group.jenkins.id
 }
 
-# allow internet traffic for jenkins server
-resource "aws_security_group_rule" "egress_internet" {
-  description       = "allow egress to inet"
+# allow jenkins traffic to the internet
+resource "aws_security_group_rule" "egress_jenkins" {
+  description       = "allow egress trafic of jenkins into internet"
   type              = "egress"
   from_port         = 0
   to_port           = 0
@@ -62,13 +137,13 @@ resource "aws_security_group_rule" "egress_internet" {
   security_group_id = aws_security_group.jenkins.id
 }
 
-# allow internet traffic for jenkins worker server
-resource "aws_security_group_rule" "egress_jnlp_jenkins_workers_from_internet" {
-  description       = "allow egress to inet"
-  type              = "egress"
-  from_port         = 0
-  to_port           = 0
-  protocol          = -1
-  cidr_blocks       = ["0.0.0.0/0"]
-  security_group_id = aws_security_group.jenkins_workers.id
+# allow ingress traffic from app into db
+resource "aws_security_group_rule" "ingress_db" {
+  description              = "allow ingress trafic"
+  type                     = "ingress"
+  from_port                = 3306
+  to_port                  = 3306
+  protocol                 = "tcp"
+  source_security_group_id = aws_security_group.app.id
+  security_group_id        = aws_security_group.rds_msql.id
 }

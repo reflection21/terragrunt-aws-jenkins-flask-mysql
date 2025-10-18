@@ -1,0 +1,10 @@
+---
+- name: deploy jenkins master
+  hosts: jenkins-master
+  roles:
+    - jenkins-master
+
+# - name: deploy jenkins worker
+#   hosts: jenkins_worker
+#   roles:
+#     - jenkins_worker
