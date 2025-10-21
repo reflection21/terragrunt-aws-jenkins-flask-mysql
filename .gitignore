@@ -84,3 +84,6 @@ Thumbs.db
 **/.terragrunt-cache/*
 
 .venv_for_modules
+
+infrastructure/.vagrant
+infrastructure/Vagrantfile

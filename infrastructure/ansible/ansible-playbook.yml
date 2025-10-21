@@ -1,10 +1,14 @@
----
-- name: deploy jenkins master
-  hosts: jenkins-master
+- name: Jenkins Master Setup
+  hosts: test-jenkins-master
   roles:
-    - jenkins-master
+    - role: jenkins-master
 
-# - name: deploy jenkins worker
-#   hosts: jenkins_worker
+# - name: Jenkins Workers Setup
+#   hosts: test-jenkins-workers
 #   roles:
-#     - jenkins_worker
+#     - role: jenkins-worker
+
+# - name: Flask Servers Setup
+#   hosts: test-flask-servers
+#   roles:
+#     - role: flask_app

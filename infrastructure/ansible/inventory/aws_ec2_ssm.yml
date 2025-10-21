@@ -1,0 +1,13 @@
+plugin: amazon.aws.aws_ec2
+regions:
+  - eu-north-1
+filters:
+  "tag:Ansible": present
+hostnames:
+  - instance-id
+compose:
+  ansible_connection: community.aws.aws_ssm
+  ansible_user: ubuntu
+keyed_groups:
+  - key: tags.Ansible
+    prefix: ""

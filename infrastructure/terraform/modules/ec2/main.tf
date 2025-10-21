@@ -1,13 +1,13 @@
 # jenkins master
 resource "aws_instance" "jenkins" {
-  count                       = length(var.jenkins_subnet)
+  count                       = 1
   ami                         = "ami-0a716d3f3b16d290c" # ubuntu 24.04
   instance_type               = "t3.micro"
-  subnet_id                   = var.jenkins_subnet[count.index]
+  subnet_id                   = var.jenkins_subnet[0]
   security_groups             = [var.jenkins_sg]
   monitoring                  = true
   iam_instance_profile        = "jenkins_profile"
-  user_data                   = file("${path.module}/bootstrap_master.sh")
+  # user_data                   = file("${path.module}/bootstrap_master.sh")
   metadata_options {
     http_endpoint = "enabled"
     http_tokens   = "required"
@@ -17,7 +17,7 @@ resource "aws_instance" "jenkins" {
   }
   tags = {
     "Name"   = "${var.deployment_prefix}-jenkins-server-${count.index + 1}"
-    "Deploy" = "ansible"
+    "Ansible" = "${var.deployment_prefix}-jenkins-master"
     "Owner"  = "artembryhynets@gmail.com"
   }
 }
@@ -31,11 +31,11 @@ resource "aws_spot_instance_request" "jenkins_workers" {
   security_groups      = [var.jenkins_workers_sg]
   spot_price           = "0.04"
   iam_instance_profile = "jenkins_workers_profile"
-  user_data            = file("${path.module}/bootstrap_workers.sh")
+  # user_data            = file("${path.module}/bootstrap_workers.sh")
 
   tags = {
     "Name"   = "${var.deployment_prefix}-jenkins-workers-${count.index + 1}"
-    "Deploy" = "ansible"
+    "Ansible" = "${var.deployment_prefix}jenkins-workers"
     "Owner"  = "artembryhynets@gmail.com"
   }
 }
@@ -50,7 +50,7 @@ resource "aws_instance" "flask_instance" {
   monitoring                  = true
   iam_instance_profile        = "app_profile"
   associate_public_ip_address = false
-  user_data                   = file("${path.module}/bootstrap_flask.sh")
+  # user_data                   = file("${path.module}/bootstrap_flask.sh")
   metadata_options {
     http_endpoint = "enabled"
     http_tokens   = "required"
@@ -60,7 +60,7 @@ resource "aws_instance" "flask_instance" {
   }
   tags = {
     "Name"   = "${var.deployment_prefix}-flask-server-${count.index + 1}"
-    "Deploy" = "ansible"
+    "Ansible" = "${var.deployment_prefix}-flask-servers"
     "Owner"  = "artembryhynets@gmail.com"
   }
 }
